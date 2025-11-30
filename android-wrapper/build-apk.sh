@@ -73,6 +73,24 @@ fi
 
 # Build debug APK
 echo "Building debug APK... (this may take a while)"
-cordova build android --debug
+# Use safer Gradle flags for low-memory CI/containers: avoid daemon and limit JVM heap
+# Pass extra args through Cordova to Gradle. These flags reduce flaky daemon crashes in Codespaces.
+CORDOVA_GRADLE_FLAGS=("--no-daemon" "-Dorg.gradle.jvmargs=-Xmx1200m -Dfile.encoding=UTF-8")
 
+# Build with the extra Gradle flags
+cordova build android --debug -- "${CORDOVA_GRADLE_FLAGS[@]}"
 echo "Build finished. The debug APK will be in platforms/android/app/build/outputs/apk/debug/"
+
+# Attempt to copy the generated debug APK into the repo `public/downloads/`
+# and into the bundled wrapper offline app so `download.html` can link to it.
+APK_SRC="$ROOT_DIR/platforms/android/app/build/outputs/apk/debug/app-debug.apk"
+if [ -f "$APK_SRC" ]; then
+  echo "Copying built APK to ../public/downloads/ and wrapper www/app/downloads/"
+  mkdir -p "$ROOT_DIR/../public/downloads"
+  mkdir -p "$ROOT_DIR/www/app/downloads"
+  cp "$APK_SRC" "$ROOT_DIR/../public/downloads/datasell-debug.apk" || true
+  cp "$APK_SRC" "$ROOT_DIR/www/app/downloads/datasell-debug.apk" || true
+  echo "APK copied to public and wrapper downloads."
+else
+  echo "Warning: APK not found at $APK_SRC — build may have failed or the path differs."
+fi

@@ -10,6 +10,12 @@
 <body>
   <div id="splash" style="text-align:center">
     <div id="logoWrap" style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px">
+      <!--
+        SPLASH / OPENING IMAGE
+        Path: `app/images/web-logo2.png` (preferred) or `app/images/web-logo2.png` served from the deployed site.
+        Purpose: This image is used for the splash screen and the opening animation (the element with id="appLogo").
+        Change this file if you want a different opening animation/logo.
+      -->
       <img id="appLogo" src="" alt="DataSell" style="width:120px;height:120px;border-radius:20px;object-fit:contain;transform-origin:center;" />
       <div id="appTitle" style="font-weight:700;color:#153062">DataSell</div>
     </div>
@@ -24,8 +30,8 @@
   </div>
 
   <script>
-    // Fallback: set the same deployed URL you will use in config.xml
-    const remote = 'https://symmetrical-succotash-x545j9gv54gxhvvg.github.dev/';
+    // Fallback: set the deployed URL to your Render site
+    const remote = 'https://datasell.onrender.com/';
 
     // Prefer to use the remote site's logo if reachable, otherwise use any bundled logo
     const remoteLogo = remote.replace(/\/$/, '') + '/images/web-logo2.png';

@@ -5,7 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- APK URL for install banner (update if you host APK elsewhere) -->
-    <meta name="apk-url" content="/android-wrapper/platforms/android/app/build/outputs/apk/debug/app-debug.apk">
+    <meta name="apk-url" content="/downloads/datasell-debug.apk">
+    <!-- Runtime config injected by server: /config.js -->
+    <script src="/config.js"></script>
     <link rel="stylesheet" href="/css/responsive.css">
     
        <!-- ADD FAVICON -->
@@ -645,6 +647,12 @@ body {
         <div class="container px-2">
             <div class="d-flex justify-content-between align-items-center" style="min-height: 44px;">
                 <div class="d-flex align-items-center">
+                    <!--
+                        APP ICON / BRAND LOGO
+                        File: `public/images/web-logo2.png`
+                        Purpose: This image is used as the app header icon and is also used by the wrapper for opening/branding.
+                        If you want to change the app icon or the animated opening logo, replace this image file.
+                    -->
                     <img src="/images/web-logo2.png" alt="DataSell" style="height: 24px; width: auto; margin-right: 8px;">
                     <span class="app-title" style="font-size: 1.1rem; font-weight: 700; margin: 0; color: #333;">DataSell</span>
                 </div>
@@ -973,7 +981,9 @@ body {
     <script>
         (function(){
             try {
-                const isAndroid = /Android/i.test(navigator.userAgent || '');
+                // Detect Android-like user agents (Android, Fire OS / Silk browsers, Kindle devices)
+                const ua = navigator.userAgent || '';
+                const isAndroid = /Android|Silk|Kindle|KF[A-Z0-9]+|FireOS|Fire/i.test(ua);
                 const dismissed = localStorage.getItem('ds_install_dismissed') === '1';
                 const installed = localStorage.getItem('ds_install_installed') === '1';
                 if (!isAndroid || dismissed || installed) return;
@@ -982,7 +992,8 @@ body {
                 const installBtn = document.getElementById('installBtn');
                 const dismissBtn = document.getElementById('dismissInstall');
                 const apkMeta = document.querySelector('meta[name="apk-url"]');
-                const apkUrl = apkMeta ? apkMeta.getAttribute('content') : '/android-wrapper/platforms/android/app/build/outputs/apk/debug/app-debug.apk';
+                // Prefer runtime-provided APK URL (served from server-side env), then meta tag, then fallback
+                const apkUrl = (window && window.__APK_URL) || (apkMeta ? apkMeta.getAttribute('content') : '/android-wrapper/platforms/android/app/build/outputs/apk/debug/app-debug.apk');
 
                 const modalOverlay = document.getElementById('installModalOverlay');
                 const downloadBtn = document.getElementById('downloadApkBtn');
@@ -990,17 +1001,34 @@ body {
                 const dontShowBtn = document.getElementById('dontShowBtn');
 
                 // Show banner after short delay so it doesn't spook users
-                setTimeout(() => { banner.style.display = 'flex'; }, 800);
+                // Auto-hide after a few seconds unless the user interacts.
+                setTimeout(() => {
+                    banner.style.display = 'flex';
 
-                // Set APK link on both the banner and modal
+                    // Auto-hide after 5 seconds and mark dismissed so it doesn't reappear
+                    const autoHideTimer = setTimeout(() => {
+                        try {
+                            banner.style.display = 'none';
+                            localStorage.setItem('ds_install_dismissed','1');
+                        } catch (e) { /* ignore */ }
+                    }, 5000);
+
+                    // If user interacts (hover, click install or dismiss), keep banner visible
+                    const clearAutoHide = () => { try { clearTimeout(autoHideTimer); } catch (e) {} };
+                    installBtn.addEventListener('click', clearAutoHide);
+                    dismissBtn.addEventListener('click', clearAutoHide);
+                    banner.addEventListener('mouseenter', clearAutoHide);
+                    banner.addEventListener('touchstart', clearAutoHide, {passive:true});
+                }, 800);
+
+                // Set APK link on both the banner and modal. Use direct download for Install button.
                 installBtn.setAttribute('href', apkUrl);
+                installBtn.setAttribute('download', 'datasell-debug.apk');
+                // Also update modal download button if runtime URL is available
+                downloadBtn.setAttribute('href', apkUrl || downloadBtn.getAttribute('href'));
                 downloadBtn.setAttribute('href', apkUrl);
 
-                // When install button is clicked, show the modal with instructions
-                installBtn.addEventListener('click', function(e){
-                    e.preventDefault();
-                    modalOverlay.style.display = 'flex';
-                });
+                // When install button is clicked it will start download by default (no interception).
 
                 // Download button in modal: mark as attempted install and let browser handle download
                 downloadBtn.addEventListener('click', function(){

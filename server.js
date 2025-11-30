@@ -168,8 +168,8 @@ app.use((req, res, next) => {
   const host = req.get('host');
   const origin = req.get('origin');
   
-  // Skip domain check for health endpoints and webhooks
-  if (req.path === '/api/health' || req.path === '/api/ping' || req.path === '/api/hubnet-webhook') {
+  // Skip domain check for health endpoints, webhooks and lightweight config
+  if (req.path === '/api/health' || req.path === '/api/ping' || req.path === '/api/hubnet-webhook' || req.path === '/config.js') {
     return next();
   }
   
@@ -227,6 +227,14 @@ const requireAuth = (req, res, next) => {
     });
   }
 };
+
+// Lightweight client config endpoint (serves runtime values to the browser)
+app.get('/config.js', (req, res) => {
+  const base = (process.env.BASE_URL || 'https://datasell.onrender.com').replace(/\/$/, '');
+  const apkUrl = base + '/downloads/datasell-debug.apk';
+  res.set('Content-Type', 'application/javascript');
+  res.send(`window.__BASE_URL = ${JSON.stringify(base)}; window.__APK_URL = ${JSON.stringify(apkUrl)};`);
+});
 
 // Enhanced admin middleware
 const requireAdmin = (req, res, next) => {
