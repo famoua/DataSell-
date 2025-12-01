@@ -1,4 +1,5 @@
 name: Build APK
+
 on:
   workflow_dispatch:
   push:
@@ -7,34 +8,66 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Setup environment
+
+    # --- Install Java, Node, Cordova ---
+    - name: Install Java, Node & Cordova
       run: |
         sudo apt update
-        sudo apt install -y default-jdk nodejs npm
+        sudo apt install -y openjdk-11-jdk nodejs npm
         sudo npm install -g cordova
-    
-    - name: Copy files
+
+    # --- Install Android SDK ---
+    - name: Install Android SDK
+      run: |
+        sudo mkdir -p /usr/local/android-sdk
+        cd /usr/local/android-sdk
+        sudo wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O sdk.zip
+        sudo unzip sdk.zip -d cmdline-tools
+        sudo mv cmdline-tools/cmdline-tools cmdline-tools/latest
+        echo "ANDROID_SDK=/usr/local/android-sdk" >> $GITHUB_ENV
+        echo "/usr/local/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+        echo "/usr/local/android-sdk/platform-tools" >> $GITHUB_PATH
+        yes | sdkmanager --licenses
+        sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+
+    # --- Prepare Cordova project ---
+    - name: Prepare www project
       working-directory: ./android-wrapper
       run: |
-        # Copy public folder to www
+        npm install
         rm -rf www
-        cp -r ../public www
-        
-        # Fix missing icon files
+        mkdir -p www
+        cp -r ../public/* www/ || true
+
         mkdir -p www/images
-        if [ -f "../public/images/web-logo2.png" ]; then
-          cp ../public/images/web-logo2.png www/images/icon.png
-          cp ../public/images/web-logo2.png www/images/web-logo2-72.png
-        else
-          # Create dummy files
-          echo "dummy" > www/images/icon.png
-          echo "dummy" > www/images/web-logo2-72.png
-        fi
-    
+        echo "placeholder" > www/images/icon.png
+        echo "placeholder" > www/images/web-logo2-72.png
+
+    # --- Add platform ---
+    - name: Add Android Platform
+      working-directory: ./android-wrapper
+      run: |
+        rm -rf platforms/android
+        cordova platform add android@11.0.0
+
+    # --- Build APK ---
+    - name: Build APK
+      working-directory: ./android-wrapper
+      run: |
+        cordova build android --debug
+        echo "APK files found:"
+        find . -name "*.apk"
+
+    # --- Upload APK ---
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-debug
+        path: android-wrapper/platforms/android/app/build/outputs/apk/debug/app-debug.apk
+        if-no-files-found: error    
     - name: Install dependencies
       working-directory: ./android-wrapper
       run: |
