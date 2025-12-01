@@ -22,11 +22,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # 3. Install system dependencies
+      # 3. Install system tools
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget unzip imagemagick
+          sudo apt-get install -y wget unzip imagemagick curl
 
       # 4. Setup Android SDK
       - name: Setup Android SDK
@@ -41,21 +41,21 @@ jobs:
           mkdir -p $HOME/.android
           touch $HOME/.android/repositories.cfg
 
-      # 5. Accept Android licenses
+      # 5. Accept SDK licenses
       - name: Accept Licenses
         run: |
-          yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses
+          yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk --licenses
 
-      # 6. Install SDK components
-      - name: Install Android SDK Components
+      # 6. Install Android SDK components
+      - name: Install SDK Components
         run: |
-          $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager \
+          $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk \
             "platform-tools" \
-            "platforms;android-33" \
-            "build-tools;33.0.2"
+            "build-tools;33.0.2" \
+            "platforms;android-33"
 
-      # 7. Set Android environment variables
-      - name: Export Android Paths
+      # 7. Set environment variables
+      - name: Set Android Environment
         run: |
           echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
@@ -77,7 +77,7 @@ jobs:
         working-directory: ./android-wrapper
         run: npm install
 
-      # 11. Prepare www folder and generate icons
+      # 11. Prepare Web Assets
       - name: Prepare Web Assets
         working-directory: ./android-wrapper
         run: |
@@ -100,20 +100,19 @@ jobs:
           rm -rf platforms/android || true
           cordova platform add android@11.0.0
 
-      # 13. Force Gradle 7.5.1
-      - name: Force Gradle 7.5.1
+      # 13. Force Gradle Wrapper 7.5.1 for Cordova
+      - name: Force Gradle Wrapper 7.5.1
         working-directory: ./android-wrapper/platforms/android
         run: |
-          GRADLE_WRAPPER="gradle/wrapper/gradle-wrapper.properties"
-          if [ -f "$GRADLE_WRAPPER" ]; then
-            sed -i 's|distributionUrl=.*|distributionUrl=https\://services.gradle.org/distributions/gradle-7.5.1-all.zip|' $GRADLE_WRAPPER
-          fi
+          mkdir -p gradle/wrapper
+          curl -o gradle/wrapper/gradle-wrapper.properties https://raw.githubusercontent.com/apache/cordova-android/11.0.0/bin/templates/cordova/lib/gradle/wrapper/gradle-wrapper.properties
+          sed -i 's|distributionUrl=.*|distributionUrl=https\://services.gradle.org/distributions/gradle-7.5.1-all.zip|' gradle/wrapper/gradle-wrapper.properties
 
-      # 14. Build debug APK
+      # 14. Build APK using Gradle wrapper
       - name: Build APK
         working-directory: ./android-wrapper
         run: |
-          cordova build android --debug --no-telemetry
+          ./platforms/android/gradlew cdvBuildDebug --no-telemetry
           ls -R platforms/android/app/build/outputs/apk/
 
       # 15. Upload APK artifact
