@@ -8,33 +8,79 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
     
-    - name: Setup Java 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-    
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
-      with:
-        packages: |
-          platform-tools
-          platforms;android-33
-          build-tools;33.0.2
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-    
-    - name: Install Cordova
+    - name: Setup environment
       run: |
+        # Install basic tools
+        sudo apt-get update
+        sudo apt-get install -y nodejs npm openjdk-17-jdk
+        
+        # Install Cordova
+        sudo npm install -g cordova@11.0.0
+        
+        # Install Android SDK using sdkmanager
+        mkdir -p ~/android-sdk
+        cd ~/android-sdk
+        wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+        unzip commandlinetools-linux-9477386_latest.zip
+        mkdir -p cmdline-tools/latest
+        mv cmdline-tools/* cmdline-tools/latest/
+        
+        # Set environment
+        echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
+        echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+        echo "$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
+    
+    - name: Accept licenses and install Android
+      run: |
+        yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+        $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+    
+    - name: Build the APK
+      working-directory: ./android-wrapper
+      run: |
+        # Install dependencies
+        npm install
+        
+        # Copy public to www
+        rm -rf www
+        cp -r ../public www
+        
+        # Skip icon issues by modifying config.xml temporarily
+        if [ -f "config.xml" ]; then
+          cp config.xml config.xml.backup
+          # Remove icon references if they cause issues
+          sed -i '/<icon/d' config.xml || true
+        fi
+        
+        # Add platform and build
+        cordova platform add android@11.0.0
+        cordova build android --debug
+        
+        # Restore config.xml
+        if [ -f "config.xml.backup" ]; then
+          mv config.xml.backup config.xml
+        fi
+        
+        # Check for APK
+        if [ -f "platforms/android/app/build/outputs/apk/debug/app-debug.apk" ]; then
+          echo "✅ SUCCESS! APK built."
+          ls -lh platforms/android/app/build/outputs/apk/debug/app-debug.apk
+        else
+          echo "APK locations:"
+          find . -name "*.apk" -type f
+        fi
+    
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-apk
+        path: ./android-wrapper/platforms/android/app/build/outputs/apk/debug/app-debug.apk
+        if-no-files-found: error      run: |
         npm install -g cordova
     
     - name: Prepare project
