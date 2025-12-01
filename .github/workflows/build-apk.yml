@@ -1,159 +1,124 @@
-name: Build Cordova Android
+name: Build Android APK
 
 on:
+  workflow_dispatch:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
-  build:
+  build-apk:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      # Checkout code
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    # -------------------------------
-    # Install Java 17 (Fixes your error)
-    # -------------------------------
-    - name: Install Java 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+      # Java 17 (required for new Android SDK)
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-    - name: Set JAVA_HOME to Java 17
-      run: echo "JAVA_HOME=$JAVA_HOME_17_X64" >> $GITHUB_ENV
+      # Install system tools
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip imagemagick
 
-    # -------------------------------
-    # Install Node & Cordova
-    # -------------------------------
-    - name: Install Node.js 18
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-    
-    - name: Install Cordova
-      run: npm install -g cordova
+      # Install & configure Android SDK
+      - name: Setup Android SDK
+        run: |
+          mkdir -p $HOME/android-sdk
+          cd /tmp
 
-    # -------------------------------
-    # Android SDK Setup
-    # -------------------------------
-    - name: Create SDK directory
-      run: mkdir -p $HOME/android-sdk/cmdline-tools
+          # Download cmdline tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q commandlinetools-linux-11076708_latest.zip
 
-    - name: Install cmdline-tools
-      run: |
-        cd $HOME/android-sdk/cmdline-tools
-        mkdir latest
-        cd latest
-        curl -Lo sdk-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-        unzip sdk-tools.zip
-        rm sdk-tools.zip
+          mkdir -p $HOME/android-sdk/cmdline-tools
+          mv cmdline-tools $HOME/android-sdk/cmdline-tools/latest
 
-    - name: Set ANDROID_SDK_ROOT path
-      run: echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
-    - name: Install required Android packages
-      run: |
-        yes | sdkmanager --sdk_root=$HOME/android-sdk \
-          "platforms;android-32" \
-          "build-tools;33.0.2" \
-          "platform-tools" \
-          "cmdline-tools;latest"
-
-    - name: Accept Android licenses
-      run: yes | sdkmanager --licenses
-
-    # -------------------------------
-    # Cordova platform add + build
-    # -------------------------------
-    - name: Remove old Android platform
-      run: rm -rf platforms/android
-
-    - name: Add Android platform
-      run: cordova platform add android@11.0.0
-
-    - name: Check Cordova requirements
-      run: cordova requirements android
-
-    - name: Build APK
-      run: cordova build android --release
-
-    # -------------------------------
-    # Upload the APK as Artifact
-    # -------------------------------
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: DataSellApp-APK
-        path: platforms/android/app/build/outputs/apk/release/app-release.apk          echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
           mkdir -p $HOME/.android
           touch $HOME/.android/repositories.cfg
 
-      - name: Accept Android licenses
-        run: yes | sdkmanager --licenses
-
-      - name: Install Android SDK components
+      # Accept licenses
+      - name: Accept Licenses
         run: |
-          sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+          yes | sdkmanager --sdk_root=$HOME/android-sdk --licenses
 
-      # Phase 2: Switch to Java 11 for Cordova
-      - name: Setup Java 11 (Cordova required)
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'temurin'
-
-      - name: Set Android environment paths
+      # Install platform tools + build tools
+      - name: Install Android SDK Components
         run: |
+          sdkmanager --sdk_root=$HOME/android-sdk \
+            "platform-tools" \
+            "build-tools;33.0.2" \
+            "platforms;android-33"
+
+      # Export Android paths
+      - name: Export Android Paths
+        run: |
+          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
           echo "$HOME/android-sdk/platform-tools" >> $GITHUB_PATH
           echo "$HOME/android-sdk/build-tools/33.0.2" >> $GITHUB_PATH
 
-      - name: Setup Node.js
+      # Install Node
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: 18
 
+      # Install Cordova
       - name: Install Cordova
         run: npm install -g cordova
 
-      - name: Install project dependencies
+      # Install project dependencies
+      - name: Install Project Dependencies
         working-directory: ./android-wrapper
-        run: npm ci || npm install
+        run: npm install
 
-      - name: Prepare web assets
+      # Copy "public" to "www" + generate icons
+      - name: Prepare Web Assets
         working-directory: ./android-wrapper
         run: |
           rm -rf www
           cp -r ../public www
+
           mkdir -p www/images
+
           if [ -f "../public/images/web-logo2.png" ]; then
-            convert ../public/images/web-logo2.png -resize 192x192 www/images/icon.png
+            echo "Generating icons..."
+            convert ../public/images/web-logo2.png -resize 36x36 www/images/web-logo2-36.png
+            convert ../public/images/web-logo2.png -resize 48x48 www/images/web-logo2-48.png
+            convert ../public/images/web-logo2.png -resize 72x72 www/images/web-logo2-72.png
+            convert ../public/images/web-logo2.png -resize 96x96 www/images/web-logo2-96.png
           else
-            echo "placeholder" > www/images/icon.png
+            echo "ERROR: Logo not found at public/images/web-logo2.png"
           fi
 
-      - name: Add Android platform
+      # Add Android platform
+      - name: Add Android Platform
         working-directory: ./android-wrapper
         run: |
-          rm -rf platforms/android
+          rm -rf platforms/android || true
           cordova platform add android@11.0.0
-          cordova requirements android
 
-      - name: Build Android APK
+      # Build APK
+      - name: Build APK
         working-directory: ./android-wrapper
-        env:
-          ANDROID_SDK_ROOT: $HOME/android-sdk
         run: |
-          cordova build android --debug --verbose
-          ls -R platforms/android/app/build/outputs/apk
+          cordova build android --debug
+          ls -R platforms/android/app/build/outputs/apk/
 
+      # Upload APK artifact
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: android-apk
-          path: ./android-wrapper/platforms/android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+          name: app-debug.apk
+          path: android-wrapper/platforms/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 5
