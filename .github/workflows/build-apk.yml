@@ -14,10 +14,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 11
+      # Use JDK 17 instead of 11 (required by newer Android SDK)
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '11'
+          java-version: '17'
           distribution: 'temurin'
 
       - name: Install required packages
@@ -25,16 +26,112 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y wget unzip
 
-      - name: Setup Android SDK (Official Action - RECOMMENDED)
-        uses: android-actions/setup-android@v3
+      - name: Install older Android SDK cmdline tools (compatible with JDK 11 if needed)
+        run: |
+          mkdir -p $HOME/android-sdk
+          cd /tmp
+          # Download an older version that works with JDK 11
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+          unzip -q commandlinetools-linux-9477386_latest.zip
+          mkdir -p $HOME/android-sdk/cmdline-tools
+          mv cmdline-tools $HOME/android-sdk/cmdline-tools/latest
+          
+          # Set environment variables
+          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+
+      - name: Accept Android licenses
+        run: |
+          mkdir -p $HOME/.android
+          touch $HOME/.android/repositories.cfg
+          # Use yes to automatically accept licenses
+          yes | sdkmanager --licenses || true
+
+      - name: Install Android SDK components
+        run: |
+          # Set SKIP_JDK_VERSION_CHECK to bypass JDK version check
+          export SKIP_JDK_VERSION_CHECK=1
+          
+          # Install platform-tools first (includes adb)
+          sdkmanager --verbose "platform-tools"
+          
+          # Install other components
+          sdkmanager --verbose \
+            "platforms;android-33" \
+            "build-tools;33.0.2" \
+            "platforms;android-31" \
+            "build-tools;31.0.0" \
+            "ndk;21.4.7075529"
+          
+          # Verify installation
+          echo "Installed components:"
+          ls -la $ANDROID_SDK_ROOT/platform-tools/
+          ls -la $ANDROID_SDK_ROOT/build-tools/
+
+      - name: Add platform-tools to PATH
+        run: |
+          echo "$ANDROID_SDK_ROOT/platform-tools" >> $GITHUB_PATH
+
+      - name: Install Node.js and Cordova
+        uses: actions/setup-node@v4
         with:
-          packages: |
-            platform-tools
-            platforms;android-33
-            build-tools;33.0.2
-            platforms;android-31
-            build-tools;31.0.0
-            ndk;21.4.7075529
+          node-version: '18'
+          
+      - name: Install Cordova CLI
+        run: |
+          npm install -g cordova
+          cordova --version
+
+      - name: Install project dependencies
+        working-directory: ./android-wrapper
+        run: |
+          npm ci || npm install
+
+      - name: Copy public into wrapper
+        working-directory: ./android-wrapper
+        run: |
+          rm -rf www || true
+          cp -r ../public ./www
+
+      - name: Build APK (Cordova)
+        working-directory: ./android-wrapper
+        env:
+          ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT
+          ANDROID_HOME: $ANDROID_SDK_ROOT
+          # Set SKIP_JDK_VERSION_CHECK for any SDK tools called by Cordova
+          SKIP_JDK_VERSION_CHECK: 1
+        run: |
+          # Debug info
+          echo "Android SDK path: $ANDROID_SDK_ROOT"
+          which adb
+          adb version || true
+          
+          # Check if build script exists
+          if [ -f "build-apk.sh" ]; then
+            echo "Found build-apk.sh, running it..."
+            chmod +x build-apk.sh
+            ./build-apk.sh
+          else
+            echo "No build-apk.sh found, using Cordova commands..."
+            # Add Android platform
+            cordova platform add android
+            
+            # Build with debug
+            cordova build android --debug
+            
+            # Alternative: Build with specific SDK version
+            # cordova build android --debug -- --gradleArg=-Pandroid.useAndroidX=true
+          fi
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: datasell-debug-apk
+          path: |
+            android-wrapper/platforms/android/app/build/outputs/apk/debug/*.apk
+            android-wrapper/platforms/android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: warn            ndk;21.4.7075529
           accept-licenses: true
 
       - name: Verify Android SDK installation
