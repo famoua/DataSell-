@@ -11,26 +11,24 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+      JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
       ANDROID_SDK_ROOT: $HOME/android-sdk
-      PATH: $HOME/gradle/gradle-7.5.1/bin:$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$PATH
+      PATH: $HOME/gradle/gradle-6.9/bin:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
-      with:
-        fetch-depth: 1
 
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '18'
+        node-version: '16'
 
     - name: Install Cordova & Gradle
       run: |
         npm install -g cordova@10.0.0
-        curl -sSL https://services.gradle.org/distributions/gradle-7.5.1-bin.zip -o gradle-7.5.1-bin.zip
-        unzip -qq gradle-7.5.1-bin.zip -d $HOME/gradle
+        curl -sSL https://services.gradle.org/distributions/gradle-6.9-bin.zip -o gradle-6.9-bin.zip
+        unzip -qq gradle-6.9-bin.zip -d $HOME/gradle
 
     - name: Setup Android SDK
       run: |
@@ -38,9 +36,9 @@ jobs:
         curl -sSL https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -o cmdline-tools.zip
         unzip -qq cmdline-tools.zip -d $ANDROID_SDK_ROOT/cmdline-tools
         yes | $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools/bin/sdkmanager --licenses
-        $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools/bin/sdkmanager "platform-tools" "platforms;android-29" "build-tools;29.0.3"
+        $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools/bin/sdkmanager "platform-tools" "platforms;android-28" "build-tools;28.0.3"
 
-    - name: Create Cordova project (if needed)
+    - name: Create Cordova project (if missing)
       run: |
         if [ ! -f config.xml ]; then
           cordova create . com.datasell.app DataSellApp
@@ -50,13 +48,7 @@ jobs:
         cordova platform remove android || true
         cordova platform add android@9.1.0
 
-    - name: Prepare Gradle wrapper
-      run: |
-        cd platforms/android
-        gradle wrapper --gradle-version 7.5.1
-        cd ../..
-
-    - name: Build Android APK
+    - name: Build APK
       run: |
         cordova build android --debug --no-telemetry
 
