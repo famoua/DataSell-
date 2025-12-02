@@ -22,6 +22,10 @@ jobs:
         persist-credentials: true
         clean: true
 
+- name: Ensure tar is installed
+  run: sudo apt-get update && sudo apt-get install -y tar
+
+
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
