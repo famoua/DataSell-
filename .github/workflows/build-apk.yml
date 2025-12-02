@@ -17,10 +17,8 @@ jobs:
 
     steps:
     # Step 1: Install essential packages
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y tar unzip curl git openjdk-11-jdk
+    - name: Install dependencies
+  run: apt-get install -y <your-dependency>
 
     # Step 2: Checkout repo
     - name: Checkout repository
