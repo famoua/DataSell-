@@ -1,4 +1,4 @@
-name: Build Production Cordova Android
+name: Build Cordova Android Production
 
 on:
   push:
@@ -13,22 +13,26 @@ jobs:
     env:
       JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
       ANDROID_SDK_ROOT: $HOME/android-sdk
-      PATH: $HOME/gradle/gradle-6.9/bin:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH
+      PATH: $HOME/gradle/gradle-7.5.1/bin:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH
 
     steps:
-    - name: Checkout repo
+    - name: Checkout repository
       uses: actions/checkout@v3
+      with:
+        persist-credentials: true
+        clean: true
 
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '16'
+        node-version: '18'
 
-    - name: Install Cordova & Gradle
+    - name: Install Cordova and Gradle
       run: |
-        npm install -g cordova@10.0.0
-        curl -sSL https://services.gradle.org/distributions/gradle-6.9-bin.zip -o gradle-6.9-bin.zip
-        unzip -qq gradle-6.9-bin.zip -d $HOME/gradle
+        npm install -g cordova
+        mkdir -p $HOME/gradle
+        curl -sSL https://services.gradle.org/distributions/gradle-7.5.1-bin.zip -o gradle-7.5.1-bin.zip
+        unzip -qq gradle-7.5.1-bin.zip -d $HOME/gradle
 
     - name: Setup Android SDK
       run: |
@@ -36,25 +40,28 @@ jobs:
         curl -sSL https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -o cmdline-tools.zip
         unzip -qq cmdline-tools.zip -d $ANDROID_SDK_ROOT/cmdline-tools
         yes | $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools/bin/sdkmanager --licenses
-        $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools/bin/sdkmanager "platform-tools" "platforms;android-33" "build-tools;28.0.3"
+        $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools/bin/sdkmanager \
+          "platform-tools" \
+          "platforms;android-32" \
+          "build-tools;32.0.0" \
+          "platforms;android-21" \
+          "build-tools;28.0.3"
+
+    - name: Create Cordova project (if missing)
+      run: |
+        if [ ! -f config.xml ]; then
+          cordova create . com.datasell.app DataSellApp
+        fi
 
     - name: Add Android platform
       run: |
         cordova platform remove android || true
-        cordova platform add android@9.1.0
+        cordova platform add android@10.1.1
 
-    - name: Build Release APK
-      env:
-        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+    - name: Build production APK
       run: |
-        cordova build android --release --no-telemetry \
-          -- --keystore=keystore.jks \
-          --storePassword=$KEYSTORE_PASSWORD \
-          --alias=$KEY_ALIAS \
-          --password=$KEY_PASSWORD
+        cordova build android --release --no-telemetry
 
     - name: List APK outputs
       run: |
-        ls -R platforms/android/app/build/outputs/apk/release/
+        ls -R platforms/android/app/build/outputs/apk/
