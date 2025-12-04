@@ -19,6 +19,7 @@
 
 import java.util.regex.Pattern
 import io.github.g00fy2.versioncompare.Version
+import groovy.xml.XmlParser
 
 String doEnsureValueExists(filePath, props, key) {
     if (props.get(key) == null) {

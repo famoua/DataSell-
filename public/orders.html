@@ -169,6 +169,7 @@
         display: flex;
         justify-content: space-between;
         margin-bottom: 0.4rem;
+        flex-wrap: wrap;
     }
 
     .detail-item {
@@ -265,7 +266,7 @@
     }
 
     #ordersList {
-        max-height: 280px;
+        max-height: 60vh;
         overflow-y: auto;
     }
 
@@ -517,6 +518,11 @@
         .detail-value { font-size: 0.8rem; }
         .order-amount { font-size: 0.9rem; }
         .order-status { font-size: 0.6rem; padding: 0.25rem 0.5rem; }
+        /* Stack detail columns vertically on small screens */
+        .order-details-row { flex-direction: column; }
+        .order-details-row .detail-item { width: 100%; margin-bottom: 0.5rem; }
+        /* Allow orders list to use more vertical space on small devices */
+        #ordersList { max-height: calc(100vh - 220px); }
     }
 
     @media (max-width: 375px) {

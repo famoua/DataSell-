@@ -19,3 +19,5 @@ out
 gradle-app.setting
 # Android Studio
 .idea
+datasell-release-key.keystore
+release-signing.properties
