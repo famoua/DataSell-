@@ -139,10 +139,9 @@ const allowedDomains = [
   'datasell.store',
   'datasell.com', 
   'datasellgh.onrender.com',
-  'datasell.io'
+  'datasell.io',
   'datasell.pro',
   'datasell.shop',
-  'localhost:3000',
 'datasell-5w0w.onrender.com'
 ];
 
