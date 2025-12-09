@@ -139,7 +139,7 @@ app.use(session({
 const allowedDomains = [
   'datasell.store',
   'datasell.com', 
-  'datasellgh.onrender.com',
+  'datasell.onrender.com',
   'datasell.io',
   'datasell.pro',
   'datasell.shop',
