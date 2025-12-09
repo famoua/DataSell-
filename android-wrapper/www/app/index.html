@@ -1154,6 +1154,10 @@ body {
         <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
         <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-messaging-compat.js"></script>
         <script>
+            // Suppress Firebase database logging warnings (mutes index warnings without deploying rules)
+            if (window.firebase && window.firebase.database) {
+              window.firebase.database.enableLogging(false);
+            }
             (async function(){
                 if (!('serviceWorker' in navigator)) return;
                 try {
