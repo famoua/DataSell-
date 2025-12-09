@@ -32,8 +32,7 @@
             const n = Number(len);
             if (!Number.isNaN(n)) {
               const kb = n / 1024;
-              if (kb < 1024) sizeText = kb.toFixed(1) + ' KB';
-              else sizeText = (kb / 1024).toFixed(2) + ' MB';
+              if (kb < 1024) sizeText = kb.toFixed(1) + ' KB'; else sizeText = (kb/1024).toFixed(2) + ' MB';
             }
           }
         } catch (e) {

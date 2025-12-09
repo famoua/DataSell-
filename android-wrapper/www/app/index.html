@@ -134,6 +134,18 @@ body {
     margin: 0;
 }
 
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    padding: 0.5rem 0;
+    z-index: 1000;
+}
+
 /* Install banner */
 .install-banner {
     position: fixed;
@@ -226,6 +238,45 @@ body {
 .wallet-balance:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(108, 99, 255, 0.3);
+}
+
+.balance-amount {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0.5rem 0;
+}
+
+.balance-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.wallet-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.wallet-btn {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 0.6rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: var(--transition);
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+}
+
+.wallet-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
 }
 
 .recent-purchase {
@@ -1022,6 +1073,7 @@ body {
 
                 if (notifBtn) {
                     notifBtn.addEventListener('click', () => {
+                        // mark notifications as seen and clear badge before navigating
                         try { setLastTs(Date.now()); updateBadge(0); } catch (e) {}
                         window.location.href = '/notifications';
                     });
@@ -1047,10 +1099,13 @@ body {
                         const list = json.notifications || [];
                         const lastTs = getLastTs();
 
+                        // compute unread notifications (created after last seen timestamp)
                         const unread = list.filter(n => (Number(n.createdAt) || 0) > lastTs);
                         const newCount = unread.length;
 
+                        // Show desktop notifications only for items newer than last poll (avoid re-notifying)
                         if (Notification.permission === 'granted') {
+                            // show each unread as a desktop notification (optional: throttle in production)
                             unread.forEach(n => {
                                 try {
                                     const opts = { body: n.body || '', icon: n.imageUrl || '/images/web-logo.png' };
@@ -1059,6 +1114,7 @@ body {
                             });
                         }
 
+                        // update badge (do not auto-clear lastTs here; lastTs is only updated when user views notifications)
                         updateBadge(newCount);
                     } catch (e) { console.error('Polling error', e); }
                 }
@@ -1073,11 +1129,12 @@ body {
               if (perm === 'granted') {
                                 pollNotifications();
                                 pollTimer = setInterval(pollNotifications, POLL_INTERVAL);
+                                // attempt to register FCM token now that permission is granted
                                 try { if (window.__registerFcmToken) window.__registerFcmToken(); } catch (e) { console.warn('FCM register after permission failed', e); }
               }
             } else if (Notification.permission === 'granted') {
-                            pollNotifications();
-                            pollTimer = setInterval(pollNotifications, POLL_INTERVAL);
+              pollNotifications();
+              pollTimer = setInterval(pollNotifications, POLL_INTERVAL);
                             try { if (window.__registerFcmToken) window.__registerFcmToken(); } catch (e) { console.warn('FCM register after permission failed', e); }
             }
           } catch (e) { console.error(e); }
@@ -1106,6 +1163,7 @@ body {
 
                     const messaging = firebase.messaging();
 
+                    // Register FCM token helper (call after permission is granted)
                     async function registerFcmToken() {
                         try {
                             const vapidKey = window.__FCM_VAPID_KEY || null;
@@ -1126,23 +1184,31 @@ body {
                             }
                         } catch (e) { console.warn('FCM getToken error:', e); }
                     }
+                    // expose helper so other code can trigger registration after permission granted
                     try { window.__registerFcmToken = registerFcmToken; } catch (e) {}
 
+                    // If permission already granted, register token
                     if (Notification.permission === 'granted') {
                         registerFcmToken();
                     }
 
+                    // Handle foreground messages: show a notification and increment badge
                     messaging.onMessage((payload) => {
                         console.log('FCM foreground message:', payload);
                         try {
                             const title = (payload.notification && payload.notification.title) || 'DataSell';
                             const opts = { body: payload.notification && payload.notification.body, icon: payload.notification && payload.notification.image || '/images/web-logo.png' };
-                            if (Notification.permission === 'granted') new Notification(title, opts);
+                            if (Notification.permission === 'granted') {
+                                new Notification(title, opts);
+                            }
 
+                            // bump badge count locally (one more unread)
                             try {
+                                const lastTs = getLastTs();
+                                // we don't know server timestamp here; increment displayed badge by 1
                                 const current = notifBadge && notifBadge.style.display !== 'none' ? parseInt(notifBadge.textContent || '0') || 0 : 0;
                                 updateBadge(current + 1);
-                            } catch (e) {}
+                            } catch (e) { /* ignore */ }
                         } catch (e) { console.error('Foreground notification error', e); }
                     });
                 } catch (err) {
