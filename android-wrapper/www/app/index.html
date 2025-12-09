@@ -146,12 +146,11 @@ body {
     z-index: 1000;
 }
 
-/* Install banner */
 .install-banner {
     position: fixed;
     left: 12px;
     right: 12px;
-    bottom: 72px;
+    top: 12px;
     background: linear-gradient(180deg,#fff 0,#f8fbff 100%);
     border: 1px solid rgba(37,99,235,0.08);
     box-shadow: 0 8px 20px rgba(37,99,235,0.06);
@@ -160,7 +159,7 @@ body {
     display: flex;
     gap: 12px;
     align-items: center;
-    z-index: 1200;
+    z-index: 1400;
 }
 .install-banner img{width:48px;height:48px;border-radius:8px;object-fit:contain}
 .install-banner .install-content{flex:1}
@@ -1001,16 +1000,16 @@ body {
                 const closeModalBtn = document.getElementById('closeModalBtn');
                 const dontShowBtn = document.getElementById('dontShowBtn');
 
-                // Show banner immediately on login
+                // Show banner at top on Android devices and auto-hide after 5 seconds
                 setTimeout(() => {
                     banner.style.display = 'flex';
 
-                    // Auto-hide after 8 seconds unless the user interacts
+                    // Auto-hide after 5 seconds (5000ms) unless the user interacts
                     const autoHideTimer = setTimeout(() => {
                         try {
                             banner.style.display = 'none';
                         } catch (e) { /* ignore */ }
-                    }, 8000);
+                    }, 5000);
 
                     // If user interacts (hover, click install or dismiss), clear auto-hide
                     const clearAutoHide = () => { try { clearTimeout(autoHideTimer); } catch (e) {} };
@@ -1018,7 +1017,7 @@ body {
                     dismissBtn.addEventListener('click', clearAutoHide);
                     banner.addEventListener('mouseenter', clearAutoHide);
                     banner.addEventListener('touchstart', clearAutoHide, {passive:true});
-                }, 500);
+                }, 100);
 
                 // Set APK link on both the banner and modal. Use direct download for Install button.
                 installBtn.setAttribute('href', apkUrl);
