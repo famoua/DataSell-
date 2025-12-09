@@ -629,7 +629,18 @@ body {
     </style>
 </head>
 <body class="mobile-layout">
-    
+    <!-- Install banner: appears on Android with APK link or configured URL -->
+    <div id="installBanner" class="install-banner" style="display:none" role="dialog" aria-live="polite">
+        <img id="installLogo" src="/images/app-icon.png" alt="App logo">
+        <div class="install-content">
+            <div class="install-title">Install DataSell App</div>
+            <div class="install-sub">Open faster and access offline features.</div>
+        </div>
+        <div class="install-actions">
+            <a id="installBtn" class="btn-install" href="#" role="button">Install</a>
+            <button id="dismissInstall" class="btn-dismiss" aria-label="Dismiss">Later</button>
+        </div>
+    </div>
     <!-- Header -->
     <header class="app-header" style="padding: 0.5rem 0; border-bottom: 1px solid #e9ecef; background: white;">
         <div class="container px-2">
