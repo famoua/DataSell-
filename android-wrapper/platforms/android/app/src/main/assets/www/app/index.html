@@ -134,17 +134,7 @@ body {
     margin: 0;
 }
 
-.bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: white;
-    border-top: 1px solid #e9ecef;
-    display: flex;
-    padding: 0.5rem 0;
-    z-index: 1000;
-}
+/* Bottom navigation styling moved to `/css/responsive.css` to match public pages */
 
 /* Install banner */
 .install-banner {
@@ -179,25 +169,7 @@ body {
 .install-modal .btn-primary{background:#2563eb;color:#fff;padding:.5rem .9rem;border-radius:8px;border:0}
 .install-modal .btn-secondary{background:transparent;border:1px solid #e6eefc;padding:.45rem .8rem;border-radius:8px}
 
-    .nav-item {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 0.4rem;
-        text-decoration: none;
-        color: #6c757d;
-        transition: color 200ms ease, transform 200ms ease;
-        font-size: 0.8rem;
-        min-height: 44px;
-        will-change: transform, color;
-    }
-
-    .nav-item i {
-        transition: transform 200ms ease, color 200ms ease;
-        display: block;
-    }
+    /* Nav item styling moved to `/css/responsive.css` */
 
     .nav-item.active {
         color: var(--primary-color);

@@ -793,11 +793,13 @@
                 </div>
                 <div class="modal-body">
                     <!-- Package Preview -->
-                    <div id="packagePreview" style="background: rgba(108, 99, 255, 0.05); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: center;">
+                    <div id="packagePreview" style="background: rgba(108, 99, 255, 0.05); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; text-align: center;">
                         <div style="font-size: 0.85rem; color: #6c757d; margin-bottom: 0.5rem;">Selected Package</div>
                         <div style="font-size: 1.2rem; font-weight: 700; color: #333;" id="previewPackage">1GB</div>
                         <div style="font-size: 0.9rem; color: var(--primary-color); font-weight: 600; margin-top: 0.25rem;" id="previewPrice">₵5.99</div>
                     </div>
+
+                    <!-- Compact modal -- receiver preview removed per request -->
 
                         <!-- Payment Method Selection -->
                     <form id="phoneForm">
@@ -835,6 +837,67 @@
         </div>
     </div>
 
+    <!-- Purchase Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border: none; border-radius: 12px; overflow: hidden; background: white;">
+                <div style="background: white; padding: 1.25rem 1.5rem 0.75rem 1.5rem; text-align: center; border-bottom: 1px solid #e9ecef;">
+                    <div id="resultIconWrap" style="width: 72px; height: 72px; background: white; border-radius: 50%; margin: 0 auto 1rem; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.06); border: 1px solid rgba(0,0,0,0.05);">
+                        <i id="resultIcon" class="fas fa-check" style="font-size: 2rem; color: var(--primary-color);"></i>
+                    </div>
+                    <h4 id="resultTitle" style="color: #111827; margin: 0; font-weight: 700; font-size: 1.1rem;">Package Sent!</h4>
+                    <p id="resultSubtitle" style="color: #6b7280; margin: 0.35rem 0 0 0; font-size: 0.9rem;">Your data is being delivered</p>
+                </div>
+                <div class="modal-body" style="padding: 1.25rem;">
+                    <!-- From Section -->
+                    <div style="margin-bottom: 0.9rem;">
+                        <div style="font-size: 0.75rem; color: #6c757d; margin-bottom: 0.35rem; text-transform: uppercase; font-weight: 600;">From</div>
+                        <div style="background: white; padding: 0.6rem 0.9rem; border-radius: 8px; border: 1px solid #e9ecef;">
+                            <div style="font-size: 0.95rem; color: #333; font-weight: 600;" id="successUserNumber">+233 XXX XXX</div>
+                        </div>
+                    </div>
+                    <!-- To Section -->
+                    <div style="margin-bottom: 0.9rem;">
+                        <div style="font-size: 0.75rem; color: #6c757d; margin-bottom: 0.35rem; text-transform: uppercase; font-weight: 600;">To (Receiver)</div>
+                        <div style="background: white; padding: 0.6rem 0.9rem; border-radius: 8px; border: 1px solid #e9ecef;">
+                            <div style="font-size: 0.95rem; color: #333; font-weight: 600;" id="successReceiverNumber">0241234567</div>
+                        </div>
+                    </div>
+                    <!-- Package Details -->
+                    <div style="margin-bottom: 0.9rem;">
+                        <div style="font-size: 0.75rem; color: #6c757d; margin-bottom: 0.35rem; text-transform: uppercase; font-weight: 600;">Package</div>
+                        <div style="background: white; padding: 0.8rem; border-radius: 8px; border: 1px solid #e9ecef;">
+                            <div style="font-size: 0.9rem; color: #666; margin-bottom: 0.35rem;">Data Package</div>
+                            <div style="font-size: 1.05rem; font-weight: 700; color: #333;" id="successPackage">1GB - ₵5.99</div>
+                            <div style="font-size: 0.8rem; color: #6c757d; margin-top: 0.35rem;" id="successNetwork">MTN Network</div>
+                        </div>
+                    </div>
+                    <!-- Order ID -->
+                    <div style="margin-bottom: 0.9rem;">
+                        <div style="font-size: 0.75rem; color: #6c757d; margin-bottom: 0.35rem; text-transform: uppercase; font-weight: 600;">Order ID</div>
+                        <div style="background: white; padding: 0.6rem 0.9rem; border-radius: 8px; font-family: 'Courier New', monospace; display: flex; align-items: center; justify-content: space-between; border:1px solid #e9ecef;">
+                            <span style="font-size: 0.9rem; color: #333; font-weight: 600;" id="successOrderId">#12345678</span>
+                            <button type="button" onclick="copyOrderId()" style="background: none; border: none; color: var(--primary-color); cursor: pointer; font-size: 0.9rem;">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Reference -->
+                    <div style="margin-bottom: 0.9rem;">
+                        <div style="font-size: 0.75rem; color: #6c757d; margin-bottom: 0.35rem; text-transform: uppercase; font-weight: 600;">Reference</div>
+                        <div style="background: white; padding: 0.6rem 0.9rem; border-radius: 8px; font-family: 'Courier New', monospace; border:1px solid #e9ecef;">
+                            <span id="successReference" style="font-size:0.9rem;color:#333;font-weight:600;">-</span>
+                        </div>
+                    </div>
+                    <!-- Action Button -->
+                    <button id="resultPrimaryBtn" type="button" class="btn btn-primary" style="width: 100%; color: white; border: none; padding: 0.65rem; border-radius: 8px; font-weight: 600; margin-top: 0.5rem; min-height: 44px;">
+                        <i class="fas fa-home me-2"></i>Back to Home
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
     <script>
@@ -851,6 +914,7 @@
         let selectedPaymentMethod = 'wallet';
         let packages = [];
         let phoneModal = null;
+        let successModal = null;
 
         // Get URL parameters
         const urlParams = new URLSearchParams(window.location.search);
@@ -881,6 +945,7 @@
                         
                         // Initialize modal
                         phoneModal = new bootstrap.Modal(document.getElementById('phoneModal'));
+                        successModal = new bootstrap.Modal(document.getElementById('successModal'));
                     }
                 } else {
                     window.location.href = '/login';
@@ -1053,25 +1118,21 @@
                 console.log('✅ Payment verification result:', result);
 
                 if (result.success) {
-                    notyf.success('✅ Payment successful! Your data is being processed...');
-                    
-                    // Wait a moment then redirect to orders
-                    setTimeout(() => {
-                        window.location.href = '/orders';
-                    }, 2000);
+                    // show result modal with any available details
+                    showResultModal({
+                        status: 'success',
+                        orderId: result.orderId || (result.data && result.data.orderId),
+                        reference: result.reference || (result.data && result.data.reference) || reference,
+                        phoneNumber: result.phoneNumber || (result.data && result.data.phoneNumber),
+                        packageName: result.packageName || (selectedPackage && selectedPackage.name),
+                        packagePrice: result.packagePrice || (selectedPackage && selectedPackage.price),
+                        network: selectedNetwork,
+                        userPhone: currentUser && currentUser.phoneNumber ? currentUser.phoneNumber : ''
+                    });
                 } else {
-                    // Check if it's an out of stock error
-                    if (result.isOutOfStock) {
-                        notyf.error('❌ Out of Stock - Payment processed but data delivery temporarily unavailable. Please try again later.');
-                        console.log('📦 Out of Stock - Provider has insufficient balance');
-                    } else {
-                        notyf.error('❌ Payment verification failed: ' + result.error);
-                    }
-                    
-                    // Wait then redirect back to purchase page
-                    setTimeout(() => {
-                        window.location.href = '/purchase';
-                    }, 3000);
+                    // show failure modal with reason
+                    const msg = result.error || (result.isOutOfStock ? 'Out of Stock - Provider has insufficient balance' : 'Payment verification failed');
+                    showResultModal({ status: 'failed', message: msg, orderId: result.orderId });
                 }
             } catch (error) {
                 console.error('Payment verification error:', error);
@@ -1164,29 +1225,31 @@
 
                 if (result.success) {
                     console.log('✅ Purchase successful:', result);
-                    notyf.success('Data purchase successful! Your order is being processed...');
                     
                     // Update balance
                     userBalance = result.newBalance;
                     document.getElementById('balanceText').textContent = `₵${userBalance.toFixed(2)}`;
                     
-                    // Close modal
+                    // Close phone modal
                     phoneModal.hide();
                     
-                    // Redirect to orders page
-                    console.log('📦 Redirecting to orders page in 2 seconds...');
-                    setTimeout(() => {
-                        window.location.href = '/orders';
-                    }, 2000);
+                    // Show success modal with order details
+                    showResultModal({
+                        status: 'success',
+                        orderId: result.orderId,
+                        reference: result.reference || result.ref || result.transactionReference,
+                        phoneNumber: phoneNumber,
+                        packageName: selectedPackage.name,
+                        packagePrice: selectedPackage.price,
+                        network: selectedNetwork,
+                        userPhone: currentUser && currentUser.phoneNumber ? currentUser.phoneNumber : ''
+                    });
                 } else {
                     // Check if it's an out of stock error
-                    if (result.isOutOfStock) {
-                        notyf.error('❌ ' + result.error);
-                        console.log('📦 Out of Stock - Provider has insufficient balance');
-                    } else {
-                        throw new Error(result.error || 'Purchase failed');
-                    }
-                    
+                    const msg = result.error || (result.isOutOfStock ? 'Out of Stock - Provider has insufficient balance' : 'Purchase failed');
+                    console.log('📦 Purchase failed:', msg);
+                    showResultModal({ status: 'failed', message: msg, orderId: result.orderId });
+
                     // Reset button
                     confirmBtn.disabled = false;
                     confirmBtnText.textContent = 'Confirm Purchase';
@@ -1263,19 +1326,99 @@
                 }
             } catch (error) {
                 console.error('Direct payment error:', error);
-                
-                // Check if it's an out of stock error
-                if (error.message && error.message.includes('Out of Stock')) {
-                    notyf.error('❌ Out of Stock - Data temporarily unavailable. Please try again later.');
-                } else {
-                    notyf.error('Payment failed: ' + error.message);
-                }
-                
+
+                const msg = (error && error.message && error.message.includes('Out of Stock')) ? 'Out of Stock - Data temporarily unavailable. Please try again later.' : (`Payment failed: ${error && error.message ? error.message : 'An error occurred'}`);
+                showResultModal({ status: 'failed', message: msg });
+
                 // Reset button
                 confirmBtn.disabled = false;
                 confirmBtnText.textContent = 'Confirm Purchase';
                 confirmBtnLoading.style.display = 'none';
             }
+        }
+
+        // Show result modal (success or failed) with order details
+        function showResultModal(data) {
+            // data: { status: 'success'|'failed', orderId, phoneNumber, packageName, packagePrice, network, userPhone, message }
+            const formatPhoneDisplay = (phone) => {
+                if (!phone) return '-';
+                const cleanPhone = String(phone).replace(/\D/g, '');
+                if (cleanPhone.length === 10) {
+                    return `+233 ${cleanPhone.substring(0, 3)} ${cleanPhone.substring(3, 6)} ${cleanPhone.substring(6)}`;
+                }
+                return `+233 ${cleanPhone}`;
+            };
+
+            const status = data.status || (data.orderId ? 'success' : 'failed');
+            const networkLabel = data.network === 'mtn' ? 'MTN' : data.network === 'at' ? 'AT' : (data.network || 'Network');
+
+            // Update numbers and package info if present
+            if (document.getElementById('successUserNumber')) document.getElementById('successUserNumber').textContent = formatPhoneDisplay(data.userPhone);
+            if (document.getElementById('successReceiverNumber')) document.getElementById('successReceiverNumber').textContent = formatPhoneDisplay(data.phoneNumber);
+            if (document.getElementById('successPackage')) document.getElementById('successPackage').textContent = data.packageName ? `${data.packageName} - ₵${(data.packagePrice||0).toFixed(2)}` : (data.packageName || '');
+            if (document.getElementById('successNetwork')) document.getElementById('successNetwork').textContent = `${networkLabel} Network`;
+            if (document.getElementById('successOrderId')) document.getElementById('successOrderId').textContent = data.orderId ? `#${data.orderId}` : '';
+
+            // Header / icon / subtitle
+            const icon = document.getElementById('resultIcon');
+            const iconWrap = document.getElementById('resultIconWrap');
+            const title = document.getElementById('resultTitle');
+            const subtitle = document.getElementById('resultSubtitle');
+            const primaryBtn = document.getElementById('resultPrimaryBtn');
+
+            if (status === 'success') {
+                if (icon) { icon.className = 'fas fa-check'; icon.style.color = '#ffffff'; }
+                if (iconWrap) { iconWrap.style.background = '#2f855a'; }
+                if (title) title.textContent = 'Package Sent!';
+                if (subtitle) subtitle.textContent = 'Your data is being delivered';
+                if (primaryBtn) {
+                    primaryBtn.textContent = '';
+                    primaryBtn.innerHTML = '<i class="fas fa-home me-2"></i>Back to Home';
+                    primaryBtn.onclick = () => { if (successModal) successModal.hide(); setTimeout(()=>window.location.href='/',300); };
+                }
+            } else {
+                // failed
+                if (icon) { icon.className = 'fas fa-times-circle'; icon.style.color = '#ffffff'; }
+                if (iconWrap) { iconWrap.style.background = '#e53e3e'; }
+                if (title) title.textContent = 'Purchase Failed';
+                if (subtitle) subtitle.textContent = data.message || 'We could not process your purchase.';
+                if (primaryBtn) {
+                    primaryBtn.textContent = '';
+                    primaryBtn.innerHTML = '<i class="fas fa-arrow-left me-2"></i>Back to Purchase';
+                    primaryBtn.onclick = () => { if (successModal) successModal.hide(); setTimeout(()=>window.location.href='/purchase',300); };
+                }
+            }
+
+            // expose last order id for copy
+            window.currentOrderId = data.orderId || window.currentOrderId;
+
+            // Reference (transaction reference) if provided
+            if (document.getElementById('successReference')) {
+                const ref = data.reference || data.ref || data.transactionReference || '';
+                document.getElementById('successReference').textContent = ref || '-';
+            }
+
+            if (successModal) successModal.show();
+        }
+
+        // Copy order ID to clipboard
+        function copyOrderId() {
+            const orderId = document.getElementById('successOrderId').textContent;
+            navigator.clipboard.writeText(orderId).then(() => {
+                notyf.success('Order ID copied!');
+            }).catch(() => {
+                notyf.error('Failed to copy');
+            });
+        }
+
+        // Go back to home
+        function goToHome() {
+            if (successModal) {
+                successModal.hide();
+            }
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 300);
         }
 
         // Select payment method from payment options (if needed for compatibility)

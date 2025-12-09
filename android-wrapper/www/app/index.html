@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- APK URL for install banner (update if you host APK elsewhere) -->
-    <meta name="apk-url" content="/downloads/datasell-debug.apk">
+    <meta name="apk-url" content="/downloads/datasell-app-release.apk">
     <!-- Runtime config injected by server: /config.js -->
     <script src="/config.js"></script>
     <link rel="stylesheet" href="/css/responsive.css">
@@ -134,18 +134,6 @@ body {
     margin: 0;
 }
 
-.bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: white;
-    border-top: 1px solid #e9ecef;
-    display: flex;
-    padding: 0.5rem 0;
-    z-index: 1000;
-}
-
 /* Install banner */
 .install-banner {
     position: fixed;
@@ -238,45 +226,6 @@ body {
 .wallet-balance:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(108, 99, 255, 0.3);
-}
-
-.balance-amount {
-    font-size: 2rem;
-    font-weight: 700;
-    margin: 0.5rem 0;
-}
-
-.balance-label {
-    font-size: 0.9rem;
-    opacity: 0.9;
-}
-
-.wallet-actions {
-    display: flex;
-    gap: 0.5rem;
-    margin-top: 0.75rem;
-}
-
-.wallet-btn {
-    flex: 1;
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: white;
-    padding: 0.6rem;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    transition: var(--transition);
-    min-height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.25rem;
-}
-
-.wallet-btn:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: translateY(-1px);
 }
 
 .recent-purchase {
@@ -650,8 +599,14 @@ body {
                     <img src="/images/web-logo2.png" alt="DataSell" style="height: 24px; width: auto; margin-right: 8px;">
                     <span class="app-title" style="font-size: 1.1rem; font-weight: 700; margin: 0; color: #333;">DataSell</span>
                 </div>
-                <div class="user-avatar" id="userAvatar" style="width: 32px; height: 32px; font-size: 0.85rem;">
-                    <i class="fas fa-user"></i>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <button id="notifBtn" class="btn btn-link" title="Notifications" style="color:#333;font-size:18px;border:0;background:transparent;padding:0;position:relative;">
+                        <i class="fas fa-bell"></i>
+                        <span id="notifBadge" style="display:none;background:#ff3b30;color:#fff;border-radius:50%;width:22px;height:22px;position:absolute;top:-8px;right:-8px;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;">0</span>
+                    </button>
+                    <div class="user-avatar" id="userAvatar" style="width: 32px; height: 32px; font-size: 0.85rem;">
+                        <i class="fas fa-user"></i>
+                    </div>
                 </div>
             </div>
         </div>
@@ -978,55 +933,54 @@ body {
                 // Detect Android-like user agents (Android, Fire OS / Silk browsers, Kindle devices)
                 const ua = navigator.userAgent || '';
                 const isAndroid = /Android|Silk|Kindle|KF[A-Z0-9]+|FireOS|Fire/i.test(ua);
-                const dismissed = localStorage.getItem('ds_install_dismissed') === '1';
-                const installed = localStorage.getItem('ds_install_installed') === '1';
-                if (!isAndroid || dismissed || installed) return;
+                
+                // Show banner every time on Android (removed dismissed/installed checks)
+                // so users see it on every login
+                if (!isAndroid) return;
 
                 const banner = document.getElementById('installBanner');
                 const installBtn = document.getElementById('installBtn');
                 const dismissBtn = document.getElementById('dismissInstall');
                 const apkMeta = document.querySelector('meta[name="apk-url"]');
                 // Prefer runtime-provided APK URL (served from server-side env), then meta tag, then fallback
-                const apkUrl = (window && window.__APK_URL) || (apkMeta ? apkMeta.getAttribute('content') : '/android-wrapper/platforms/android/app/build/outputs/apk/debug/app-debug.apk');
+                const apkUrl = (window && window.__APK_URL) || (apkMeta ? apkMeta.getAttribute('content') : '/downloads/datasell-app-release.apk');
 
                 const modalOverlay = document.getElementById('installModalOverlay');
                 const downloadBtn = document.getElementById('downloadApkBtn');
                 const closeModalBtn = document.getElementById('closeModalBtn');
                 const dontShowBtn = document.getElementById('dontShowBtn');
 
-                // Show banner after short delay so it doesn't spook users
-                // Auto-hide after a few seconds unless the user interacts.
+                // Show banner immediately on login
                 setTimeout(() => {
                     banner.style.display = 'flex';
 
-                    // Auto-hide after 5 seconds and mark dismissed so it doesn't reappear
+                    // Auto-hide after 8 seconds unless the user interacts
                     const autoHideTimer = setTimeout(() => {
                         try {
                             banner.style.display = 'none';
-                            localStorage.setItem('ds_install_dismissed','1');
                         } catch (e) { /* ignore */ }
-                    }, 5000);
+                    }, 8000);
 
-                    // If user interacts (hover, click install or dismiss), keep banner visible
+                    // If user interacts (hover, click install or dismiss), clear auto-hide
                     const clearAutoHide = () => { try { clearTimeout(autoHideTimer); } catch (e) {} };
                     installBtn.addEventListener('click', clearAutoHide);
                     dismissBtn.addEventListener('click', clearAutoHide);
                     banner.addEventListener('mouseenter', clearAutoHide);
                     banner.addEventListener('touchstart', clearAutoHide, {passive:true});
-                }, 800);
+                }, 500);
 
                 // Set APK link on both the banner and modal. Use direct download for Install button.
                 installBtn.setAttribute('href', apkUrl);
-                installBtn.setAttribute('download', 'datasell-debug.apk');
-                // Also update modal download button if runtime URL is available
+                installBtn.setAttribute('download', 'datasell-app-release.apk');
+                // Also update modal download button to point to release APK
                 downloadBtn.setAttribute('href', apkUrl || downloadBtn.getAttribute('href'));
                 downloadBtn.setAttribute('href', apkUrl);
 
                 // When install button is clicked it will start download by default (no interception).
 
-                // Download button in modal: mark as attempted install and let browser handle download
+                // Download button in modal: let browser handle download
                 downloadBtn.addEventListener('click', function(){
-                    localStorage.setItem('ds_install_installed','1');
+                    // No longer mark as installed; show banner again on next login
                 });
 
                 // Close modal
@@ -1034,7 +988,7 @@ body {
                     modalOverlay.style.display = 'none';
                 });
 
-                // Don't show again
+                // Don't show again button (kept for UX but user can re-enable by clearing localStorage manually)
                 dontShowBtn.addEventListener('click', function(){
                     modalOverlay.style.display = 'none';
                     banner.style.display = 'none';
@@ -1045,7 +999,7 @@ body {
                 dismissBtn.addEventListener('click', function(e){
                     e.preventDefault();
                     banner.style.display = 'none';
-                    localStorage.setItem('ds_install_dismissed','1');
+                    // Don't set dismissed flag; show again on next login
                 });
 
             } catch (err) { console.error('Install banner error', err); }
@@ -1057,5 +1011,144 @@ body {
         <img src="/images/whatsapp-logo.png" alt="WhatsApp" class="whatsapp-icon">
         <span class="whatsapp-text">Join our community</span>
     </a>
+
+    <!-- Notifications: prompt for permission + polling -->
+    <script>
+      (function(){
+        const notifBtn = document.getElementById('notifBtn');
+        const notifBadge = document.getElementById('notifBadge');
+        const POLL_INTERVAL = 30 * 1000;
+        let pollTimer = null;
+
+                if (notifBtn) {
+                    notifBtn.addEventListener('click', () => {
+                        try { setLastTs(Date.now()); updateBadge(0); } catch (e) {}
+                        window.location.href = '/notifications';
+                    });
+                }
+
+        function getLastTs() {
+          try { return Number(localStorage.getItem('ds_last_notif_ts') || '0'); } catch(e){return 0;}
+        }
+        function setLastTs(ts){ try{ localStorage.setItem('ds_last_notif_ts', String(ts)); }catch(e){}  }
+
+                function updateBadge(count){
+                    if (!notifBadge) return;
+                    if (count > 0) { notifBadge.style.display = 'flex'; notifBadge.textContent = count >= 100 ? '99+' : String(count); }
+                    else { notifBadge.style.display = 'none'; }
+                }
+
+                async function pollNotifications() {
+                    try {
+                        const res = await fetch('/api/notifications', { credentials: 'include' });
+                        if (!res.ok) return;
+                        const json = await res.json();
+                        if (!json.success) return;
+                        const list = json.notifications || [];
+                        const lastTs = getLastTs();
+
+                        const unread = list.filter(n => (Number(n.createdAt) || 0) > lastTs);
+                        const newCount = unread.length;
+
+                        if (Notification.permission === 'granted') {
+                            unread.forEach(n => {
+                                try {
+                                    const opts = { body: n.body || '', icon: n.imageUrl || '/images/web-logo.png' };
+                                    new Notification(n.title || 'DataSell', opts);
+                                } catch (e) { console.error('Notify error', e); }
+                            });
+                        }
+
+                        updateBadge(newCount);
+                    } catch (e) { console.error('Polling error', e); }
+                }
+
+        async function requestPermission() {
+          try {
+            if (!('Notification' in window)) return;
+            if (Notification.permission === 'default') {
+              const ask = confirm('Do you want to receive notifications from DataSell?');
+              if (!ask) return;
+              const perm = await Notification.requestPermission();
+              if (perm === 'granted') {
+                                pollNotifications();
+                                pollTimer = setInterval(pollNotifications, POLL_INTERVAL);
+                                try { if (window.__registerFcmToken) window.__registerFcmToken(); } catch (e) { console.warn('FCM register after permission failed', e); }
+              }
+            } else if (Notification.permission === 'granted') {
+                            pollNotifications();
+                            pollTimer = setInterval(pollNotifications, POLL_INTERVAL);
+                            try { if (window.__registerFcmToken) window.__registerFcmToken(); } catch (e) { console.warn('FCM register after permission failed', e); }
+            }
+          } catch (e) { console.error(e); }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+          const lastTs = getLastTs();
+          if (lastTs > 0) { pollNotifications(); }
+          requestPermission();
+        });
+      })();
+    </script>
+        <!-- Firebase Messaging (Web Push) -->
+        <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-messaging-compat.js"></script>
+        <script>
+            (async function(){
+                if (!('serviceWorker' in navigator)) return;
+                try {
+                    const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                    console.log('Firebase SW registered:', reg);
+
+                    if (!window.__FIREBASE_CONFIG) return;
+                    // Initialize firebase app (compat)
+                    try { firebase.initializeApp(window.__FIREBASE_CONFIG); } catch (e) { console.warn('Firebase init skipped:', e); }
+
+                    const messaging = firebase.messaging();
+
+                    async function registerFcmToken() {
+                        try {
+                            const vapidKey = window.__FCM_VAPID_KEY || null;
+                            let fcmToken;
+                            if (vapidKey) {
+                                fcmToken = await messaging.getToken({ vapidKey });
+                            } else {
+                                fcmToken = await messaging.getToken();
+                            }
+                            if (fcmToken) {
+                                console.log('FCM registration token:', fcmToken);
+                                await fetch('/api/register-fcm-token', {
+                                    method: 'POST',
+                                    credentials: 'include',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ token: fcmToken })
+                                });
+                            }
+                        } catch (e) { console.warn('FCM getToken error:', e); }
+                    }
+                    try { window.__registerFcmToken = registerFcmToken; } catch (e) {}
+
+                    if (Notification.permission === 'granted') {
+                        registerFcmToken();
+                    }
+
+                    messaging.onMessage((payload) => {
+                        console.log('FCM foreground message:', payload);
+                        try {
+                            const title = (payload.notification && payload.notification.title) || 'DataSell';
+                            const opts = { body: payload.notification && payload.notification.body, icon: payload.notification && payload.notification.image || '/images/web-logo.png' };
+                            if (Notification.permission === 'granted') new Notification(title, opts);
+
+                            try {
+                                const current = notifBadge && notifBadge.style.display !== 'none' ? parseInt(notifBadge.textContent || '0') || 0 : 0;
+                                updateBadge(current + 1);
+                            } catch (e) {}
+                        } catch (e) { console.error('Foreground notification error', e); }
+                    });
+                } catch (err) {
+                    console.error('Firebase messaging setup failed', err);
+                }
+            })();
+        </script>
 </body>
 </html>

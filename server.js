@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const admin = require('firebase-admin');
 const axios = require('axios');
 const session = require('express-session');
@@ -142,6 +143,7 @@ const allowedDomains = [
   'datasell.io',
   'datasell.pro',
   'datasell.shop',
+  'localhost:3000',
 'datasell-5w0w.onrender.com'
 ];
 
@@ -232,8 +234,34 @@ const requireAuth = (req, res, next) => {
 app.get('/config.js', (req, res) => {
   const base = (process.env.BASE_URL || 'https://datasell.onrender.com').replace(/\/$/, '');
   const apkUrl = base + '/downloads/datasell-debug.apk';
+  const firebaseConfig = {
+    apiKey: process.env.FIREBASE_API_KEY || null,
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN || null,
+    projectId: process.env.FIREBASE_PROJECT_ID || null,
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET || null,
+    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || null,
+    appId: process.env.FIREBASE_APP_ID || null
+  };
   res.set('Content-Type', 'application/javascript');
-  res.send(`window.__BASE_URL = ${JSON.stringify(base)}; window.__APK_URL = ${JSON.stringify(apkUrl)};`);
+  const vapid = process.env.FIREBASE_VAPID_KEY || null;
+  res.send(`window.__BASE_URL = ${JSON.stringify(base)}; window.__APK_URL = ${JSON.stringify(apkUrl)}; window.__FIREBASE_CONFIG = ${JSON.stringify(firebaseConfig)}; window.__FCM_VAPID_KEY = ${JSON.stringify(vapid)};`);
+});
+
+// Serve Firebase Messaging Service Worker dynamically with server-side config
+app.get('/firebase-messaging-sw.js', (req, res) => {
+  res.set('Content-Type', 'application/javascript');
+  const fbConfig = {
+    apiKey: process.env.FIREBASE_API_KEY || null,
+    authDomain: process.env.FIREBASE_AUTH_DOMAIN || null,
+    projectId: process.env.FIREBASE_PROJECT_ID || null,
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET || null,
+    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || null,
+    appId: process.env.FIREBASE_APP_ID || null
+  };
+
+  const sw = `importScripts('https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js');\nimportScripts('https://www.gstatic.com/firebasejs/9.22.1/firebase-messaging-compat.js');\n\nfirebase.initializeApp(${JSON.stringify(fbConfig)});\nconst messaging = firebase.messaging();\n\nmessaging.onBackgroundMessage(function(payload) {\n  try {\n    const title = (payload.notification && payload.notification.title) || 'Notification';\n    const options = {\n      body: (payload.notification && payload.notification.body) || '',\n      icon: (payload.notification && payload.notification.image) || '/images/web-logo.png',\n      data: payload.data || {}\n    };\n    self.registration.showNotification(title, options);\n  } catch (e) { console.error('SW background message error', e); }\n});\n\nself.addEventListener('notificationclick', function(event) {\n  event.notification.close();\n  const url = event.notification.data && event.notification.data.click_action ? event.notification.data.click_action : '/notifications';\n  event.waitUntil(clients.matchAll({ type: 'window' }).then(windowClients => {\n    for (let i = 0; i < windowClients.length; i++) {\n      const client = windowClients[i];\n      if (client.url === url && 'focus' in client) return client.focus();\n    }\n    if (clients.openWindow) return clients.openWindow(url);\n  }));\n});\n`;
+
+  res.send(sw);
 });
 
 // Enhanced admin middleware
@@ -282,6 +310,10 @@ app.get('/wallet', requireAuth, (req, res) => {
 app.get('/orders', requireAuth, (req, res) => {
   // Serve the orders page (replaced with new content)
   res.sendFile(path.join(__dirname, 'public', 'orders.html'));
+});
+
+app.get('/notifications', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'notifications.html'));
 });
 
 app.get('/profile', requireAuth, (req, res) => {
@@ -551,11 +583,131 @@ app.post('/api/login', async (req, res) => {
 });
 
 // Enhanced Get current user
-app.get('/api/user', requireAuth, (req, res) => {
-  res.json({ 
-    success: true, 
-    user: req.session.user 
-  });
+app.get('/api/user', requireAuth, async (req, res) => {
+  try {
+    const uid = req.session.user.uid;
+    const snap = await admin.database().ref('users/' + uid).once('value');
+    const userData = snap.val() || {};
+
+    // Merge session data with database fields we want the client to know
+    const user = Object.assign({}, req.session.user, {
+      phoneNumber: userData.phone || userData.phoneNumber || null,
+      walletBalance: userData.walletBalance || 0,
+      firstName: userData.firstName || null,
+      lastName: userData.lastName || null
+    });
+
+    res.json({ success: true, user });
+  } catch (err) {
+    console.error('Get user error:', err);
+    res.status(500).json({ success: false, error: 'Failed to fetch user' });
+  }
+});
+
+// Register FCM token for the logged-in user
+app.post('/api/register-fcm-token', requireAuth, async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ success: false, error: 'Token is required' });
+    const uid = req.session.user.uid;
+    await admin.database().ref(`fcmTokens/${uid}/${token}`).set(true);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Register FCM token error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Get notifications for the logged-in user (latest 100)
+app.get('/api/notifications', requireAuth, async (req, res) => {
+  try {
+    const snap = await admin.database().ref('notifications').orderByChild('createdAt').limitToLast(100).once('value');
+    const data = snap.val() || {};
+    const list = Object.entries(data).map(([id, n]) => ({ id, ...n }));
+    list.sort((a, b) => b.createdAt - a.createdAt);
+    res.json({ success: true, notifications: list });
+  } catch (err) {
+    console.error('Get notifications error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Admin: send notification (text + optional imageBase64)
+app.post('/api/send-notification', requireAdmin, async (req, res) => {
+  try {
+    const { title, body, imageBase64 } = req.body;
+    if (!title && !body) return res.status(400).json({ success: false, error: 'Title or body required' });
+
+    let imageUrl = null;
+    if (imageBase64) {
+      const uploadsDir = path.join(__dirname, 'public', 'uploads');
+      if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+      const matches = imageBase64.match(/^data:(image\/\w+);base64,(.+)$/);
+      if (matches) {
+        const ext = matches[1].split('/')[1];
+        const buf = Buffer.from(matches[2], 'base64');
+        const filename = `${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+        const filepath = path.join(uploadsDir, filename);
+        fs.writeFileSync(filepath, buf);
+        imageUrl = `/uploads/${filename}`;
+      }
+    }
+
+    const newRef = admin.database().ref('notifications').push();
+    const notif = {
+      title: title || '',
+      body: body || '',
+      imageUrl: imageUrl || null,
+      createdAt: Date.now(),
+      sentBy: req.session.user?.email || 'admin'
+    };
+
+    await newRef.set(notif);
+
+    // Collect all tokens and send push via FCM
+    const tokensSnap = await admin.database().ref('fcmTokens').once('value');
+    const tokensData = tokensSnap.val() || {};
+    const tokens = [];
+    Object.values(tokensData).forEach(userTokens => {
+      Object.keys(userTokens || {}).forEach(t => tokens.push(t));
+    });
+
+    if (tokens.length > 0) {
+      const host = req.get('host');
+      const fullImageUrl = notif.imageUrl ? `${req.protocol}://${host}${notif.imageUrl}` : null;
+      const notificationPayload = {
+        title: notif.title,
+        body: notif.body
+      };
+      // include image only when it's a non-empty string to avoid invalid-payload errors
+      if (fullImageUrl && typeof fullImageUrl === 'string') {
+        notificationPayload.image = String(fullImageUrl);
+      }
+
+      const payload = {
+        notification: notificationPayload,
+        data: {
+          click_action: '/notifications',
+          notificationId: newRef.key
+        }
+      };
+
+      // send in batches (max 500 per sendToDevice)
+      for (let i = 0; i < tokens.length; i += 500) {
+        const chunk = tokens.slice(i, i + 500);
+        try {
+          await admin.messaging().sendToDevice(chunk, payload);
+        } catch (sendErr) {
+          console.error('FCM send error for chunk:', sendErr);
+        }
+      }
+    }
+
+    res.json({ success: true, notification: notif });
+  } catch (err) {
+    console.error('Send notification error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // Enhanced Logout

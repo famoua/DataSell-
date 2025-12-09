@@ -518,6 +518,12 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="#" class="nav-link" data-tab="notifications">
+                        <i class="fas fa-bell"></i>
+                        <span>Notifications</span>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="#" class="nav-link" data-tab="packages">
                         <i class="fas fa-box"></i>
                         <span>Package Management</span>
@@ -656,6 +662,31 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+
+            <!-- Notifications Tab -->
+            <div class="tab-content" id="notifications-tab">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Send Notification</h3>
+                    </div>
+                    <form id="notificationForm">
+                        <div class="form-group">
+                            <label>Title</label>
+                            <input type="text" id="notifTitle" class="form-control" placeholder="Notification title" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Message</label>
+                            <textarea id="notifBody" class="form-control" placeholder="Notification message" rows="4" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Image (optional)</label>
+                            <input type="file" id="notifImage" class="form-control" accept="image/*">
+                            <img id="imagePreview" style="max-width:200px; margin-top:10px; display:none;">
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Send Notification</button>
+                    </form>
                 </div>
             </div>
 
@@ -951,6 +982,7 @@
             const titleMap = {
                 dashboard: 'Dashboard',
                 users: 'User Management',
+                notifications: 'Notifications',
                 packages: 'Package Management',
                 transactions: 'Order Management',
                 pricing: 'Pricing Control',
@@ -966,6 +998,9 @@
                     break;
                 case 'users':
                     loadUsers();
+                    break;
+                case 'notifications':
+                    // Notifications form is auto-bound
                     break;
                 case 'packages':
                     loadPackages();
@@ -1910,6 +1945,61 @@
             // Implementation for transaction search
             console.log('Searching transactions...');
         }
+
+        // Notification handlers
+        document.getElementById('notifImage').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                const preview = document.getElementById('imagePreview');
+                preview.src = ev.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('notificationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const title = document.getElementById('notifTitle').value.trim();
+                const body = document.getElementById('notifBody').value.trim();
+                const imageFile = document.getElementById('notifImage').files[0];
+
+                if (!title && !body) {
+                    showError('Please enter title or message');
+                    return;
+                }
+
+                let imageBase64 = null;
+                if (imageFile) {
+                    const reader = new FileReader();
+                    imageBase64 = await new Promise((resolve) => {
+                        reader.onload = () => resolve(reader.result);
+                        reader.readAsDataURL(imageFile);
+                    });
+                }
+
+                const response = await fetch('/api/send-notification', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, body, imageBase64 })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    showSuccess('Notification sent to all users!');
+                    document.getElementById('notificationForm').reset();
+                    document.getElementById('imagePreview').style.display = 'none';
+                } else {
+                    showError(data.error || 'Failed to send notification');
+                }
+            } catch (err) {
+                console.error('Send notification error:', err);
+                showError('Error sending notification');
+            }
+        });
 
         function filterTransactions() {
             // Implementation for transaction filtering
